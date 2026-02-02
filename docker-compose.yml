@@ -21,6 +21,8 @@ services:
       # Маппинг: <хост-порт>:<контейнер-порт>
       # Внутри контейнера nginx слушает на порту 80
       - '${CABINET_PORT:-3020}:80'
+    networks:
+      - remnawave-network
     healthcheck:
       test:
         [
@@ -35,3 +37,8 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
+
+networks:
+  remnawave-network:
+    external: true
+    name: remnawave-network
