@@ -175,13 +175,28 @@ export default function Subscription() {
   const tariffs =
     isTariffsMode && purchaseOptions && 'tariffs' in purchaseOptions ? purchaseOptions.tariffs : [];
 
+  // Get truly available servers for a given period (same filter as rendering)
+  const getAvailableServers = useCallback(
+    (period: PeriodOption | null) => {
+      if (!period?.servers.options) return [];
+      return period.servers.options.filter((server) => {
+        if (!server.is_available) return false;
+        if (subscription?.is_trial && server.name.toLowerCase().includes('trial')) return false;
+        return true;
+      });
+    },
+    [subscription?.is_trial],
+  );
+
   // Determine which steps are needed
   const steps = useMemo<PurchaseStep[]>(() => {
     const result: PurchaseStep[] = ['period'];
     if (selectedPeriod?.traffic.selectable && (selectedPeriod.traffic.options?.length ?? 0) > 0) {
       result.push('traffic');
     }
-    if (selectedPeriod && (selectedPeriod.servers.options?.length ?? 0) > 0) {
+    const availableServers = getAvailableServers(selectedPeriod);
+    // Skip server selection step if only 1 server available (auto-select it)
+    if (availableServers.length > 1) {
       result.push('servers');
     }
     if (selectedPeriod && selectedPeriod.devices.max > selectedPeriod.devices.min) {
@@ -189,7 +204,7 @@ export default function Subscription() {
     }
     result.push('confirm');
     return result;
-  }, [selectedPeriod]);
+  }, [selectedPeriod, getAvailableServers]);
 
   const currentStepIndex = steps.indexOf(currentStep);
   const isFirstStep = currentStepIndex === 0;
@@ -203,10 +218,19 @@ export default function Subscription() {
         classicOptions.periods[0];
       setSelectedPeriod(defaultPeriod);
       setSelectedTraffic(classicOptions.selection.traffic_value);
-      setSelectedServers(classicOptions.selection.servers);
+      const availableServers = getAvailableServers(defaultPeriod);
+      const availableServerUuids = new Set(availableServers.map((s) => s.uuid));
+      // If only 1 server available, auto-select it (step will be skipped)
+      if (availableServers.length === 1) {
+        setSelectedServers([availableServers[0].uuid]);
+      } else {
+        setSelectedServers(
+          classicOptions.selection.servers.filter((uuid) => availableServerUuids.has(uuid)),
+        );
+      }
       setSelectedDevices(classicOptions.selection.devices);
     }
-  }, [classicOptions, selectedPeriod]);
+  }, [classicOptions, selectedPeriod, getAvailableServers]);
 
   // Build selection object
   const currentSelection: PurchaseSelection = useMemo(
@@ -311,6 +335,28 @@ export default function Subscription() {
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
       queryClient.invalidateQueries({ queryKey: ['purchase-options'] });
       setSwitchTariffId(null);
+    },
+    onError: (error: unknown) => {
+      // Handle subscription_expired error - redirect to purchase flow
+      if (error instanceof AxiosError) {
+        const detail = error.response?.data?.detail;
+        if (
+          typeof detail === 'object' &&
+          detail?.error_code === 'subscription_expired' &&
+          detail?.use_purchase_flow === true
+        ) {
+          // Find the tariff user was trying to switch to and open purchase form
+          const targetTariff = tariffs.find((t) => t.id === switchTariffId);
+          if (targetTariff) {
+            setSwitchTariffId(null);
+            setSelectedTariff(targetTariff);
+            setSelectedTariffPeriod(targetTariff.periods[0] || null);
+            setShowTariffPurchase(true);
+            // Refetch purchase-options to get updated expired status
+            queryClient.invalidateQueries({ queryKey: ['purchase-options'] });
+          }
+        }
+      }
     },
   });
 
@@ -519,15 +565,16 @@ export default function Subscription() {
   // Auto-scroll to tariffs section when coming from Dashboard "Продлить" button
   useEffect(() => {
     const state = location.state as { scrollToExtend?: boolean } | null;
-    if (state?.scrollToExtend && tariffsCardRef.current) {
+    // Wait for tariffs to load before scrolling
+    if (state?.scrollToExtend && tariffsCardRef.current && tariffs.length > 0) {
       const timer = setTimeout(() => {
-        tariffsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
+        tariffsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
       // Clear the state to prevent re-scrolling on subsequent renders
       window.history.replaceState({}, document.title);
       return () => clearTimeout(timer);
     }
-  }, [location.state]);
+  }, [location.state, tariffs.length]);
 
   const copyUrl = () => {
     if (subscription?.subscription_url) {
@@ -1184,13 +1231,47 @@ export default function Subscription() {
                   {devicePriceData?.available && devicePriceData.price_per_device_label && (
                     <div className="text-center">
                       <div className="mb-2 text-sm text-dark-400">
-                        {devicePriceData.price_per_device_label}/
-                        {t('subscription.perDevice').replace('/ ', '')} (
+                        {/* Show original price with strikethrough if discount */}
+                        {devicePriceData.discount_percent &&
+                        devicePriceData.discount_percent > 0 ? (
+                          <span>
+                            <span className="text-dark-500 line-through">
+                              {formatPrice(devicePriceData.original_price_per_device_kopeks || 0)}
+                            </span>
+                            <span className="mx-1">{devicePriceData.price_per_device_label}</span>
+                          </span>
+                        ) : (
+                          devicePriceData.price_per_device_label
+                        )}
+                        /{t('subscription.perDevice').replace('/ ', '')} (
                         {t('subscription.days', { count: devicePriceData.days_left })})
                       </div>
-                      <div className="text-2xl font-bold text-accent-400">
-                        {devicePriceData.total_price_label}
-                      </div>
+                      {/* Discount badge */}
+                      {devicePriceData.discount_percent && devicePriceData.discount_percent > 0 && (
+                        <div className="mb-2">
+                          <span className="inline-block rounded-full bg-green-500/20 px-2.5 py-0.5 text-sm font-medium text-green-400">
+                            -{devicePriceData.discount_percent}%
+                          </span>
+                        </div>
+                      )}
+                      {/* Total price - show as free if 100% discount or 0 */}
+                      {devicePriceData.total_price_kopeks === 0 ? (
+                        <div className="text-2xl font-bold text-green-400">
+                          {t('subscription.switchTariff.free')}
+                        </div>
+                      ) : (
+                        <div className="text-2xl font-bold text-accent-400">
+                          {/* Show original total with strikethrough if discount */}
+                          {devicePriceData.discount_percent &&
+                            devicePriceData.discount_percent > 0 &&
+                            devicePriceData.base_total_price_kopeks && (
+                              <span className="mr-2 text-lg text-dark-500 line-through">
+                                {formatPrice(devicePriceData.base_total_price_kopeks)}
+                              </span>
+                            )}
+                          {devicePriceData.total_price_label}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1483,8 +1564,28 @@ export default function Subscription() {
                                 ? '♾️ ' + t('subscription.additionalOptions.unlimited')
                                 : `${pkg.gb} ${t('common.units.gb')}`}
                             </div>
+                            {/* Discount badge */}
+                            {pkg.discount_percent && pkg.discount_percent > 0 && (
+                              <div className="mb-1">
+                                <span className="inline-block rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
+                                  -{pkg.discount_percent}%
+                                </span>
+                              </div>
+                            )}
+                            {/* Price with original strikethrough if discount */}
                             <div className="font-medium text-accent-400">
-                              {formatPrice(pkg.price_kopeks)}
+                              {pkg.discount_percent &&
+                              pkg.discount_percent > 0 &&
+                              pkg.base_price_kopeks ? (
+                                <>
+                                  <span className="mr-1 text-sm text-dark-500 line-through">
+                                    {formatPrice(pkg.base_price_kopeks)}
+                                  </span>
+                                  {formatPrice(pkg.price_kopeks)}
+                                </>
+                              ) : (
+                                formatPrice(pkg.price_kopeks)
+                              )}
                             </div>
                           </button>
                         ))}
@@ -1614,99 +1715,101 @@ export default function Subscription() {
                       )}
 
                       <div className="max-h-64 space-y-2 overflow-y-auto">
-                        {countriesData.countries.map((country) => {
-                          const isCurrentlyConnected = country.is_connected;
-                          const isSelected = selectedServersToUpdate.includes(country.uuid);
-                          const willBeAdded = !isCurrentlyConnected && isSelected;
-                          const willBeRemoved = isCurrentlyConnected && !isSelected;
+                        {countriesData.countries
+                          .filter((country) => country.is_available || country.is_connected)
+                          .map((country) => {
+                            const isCurrentlyConnected = country.is_connected;
+                            const isSelected = selectedServersToUpdate.includes(country.uuid);
+                            const willBeAdded = !isCurrentlyConnected && isSelected;
+                            const willBeRemoved = isCurrentlyConnected && !isSelected;
 
-                          return (
-                            <button
-                              key={country.uuid}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setSelectedServersToUpdate((prev) =>
-                                    prev.filter((u) => u !== country.uuid),
-                                  );
-                                } else {
-                                  setSelectedServersToUpdate((prev) => [...prev, country.uuid]);
-                                }
-                              }}
-                              disabled={!country.is_available && !isCurrentlyConnected}
-                              className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${
-                                isSelected
-                                  ? willBeAdded
-                                    ? 'border-success-500 bg-success-500/10'
-                                    : 'border-accent-500 bg-accent-500/10'
-                                  : willBeRemoved
-                                    ? 'border-error-500/50 bg-error-500/5'
-                                    : 'border-dark-700/50 bg-dark-800/30 hover:border-dark-600'
-                              } ${!country.is_available && !isCurrentlyConnected ? 'cursor-not-allowed opacity-50' : ''}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="text-lg">
-                                  {willBeAdded
-                                    ? '➕'
+                            return (
+                              <button
+                                key={country.uuid}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedServersToUpdate((prev) =>
+                                      prev.filter((u) => u !== country.uuid),
+                                    );
+                                  } else {
+                                    setSelectedServersToUpdate((prev) => [...prev, country.uuid]);
+                                  }
+                                }}
+                                disabled={!country.is_available && !isCurrentlyConnected}
+                                className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                                  isSelected
+                                    ? willBeAdded
+                                      ? 'border-success-500 bg-success-500/10'
+                                      : 'border-accent-500 bg-accent-500/10'
                                     : willBeRemoved
-                                      ? '➖'
-                                      : isSelected
-                                        ? '✅'
-                                        : '⚪'}
-                                </span>
-                                <div>
-                                  <div className="flex items-center gap-2 font-medium text-dark-100">
-                                    {country.name}
-                                    {country.has_discount && !isCurrentlyConnected && (
-                                      <span className="rounded bg-success-500/20 px-1.5 py-0.5 text-xs text-success-400">
-                                        -{country.discount_percent}%
-                                      </span>
+                                      ? 'border-error-500/50 bg-error-500/5'
+                                      : 'border-dark-700/50 bg-dark-800/30 hover:border-dark-600'
+                                } ${!country.is_available && !isCurrentlyConnected ? 'cursor-not-allowed opacity-50' : ''}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-lg">
+                                    {willBeAdded
+                                      ? '➕'
+                                      : willBeRemoved
+                                        ? '➖'
+                                        : isSelected
+                                          ? '✅'
+                                          : '⚪'}
+                                  </span>
+                                  <div>
+                                    <div className="flex items-center gap-2 font-medium text-dark-100">
+                                      {country.name}
+                                      {country.has_discount && !isCurrentlyConnected && (
+                                        <span className="rounded bg-success-500/20 px-1.5 py-0.5 text-xs text-success-400">
+                                          -{country.discount_percent}%
+                                        </span>
+                                      )}
+                                    </div>
+                                    {willBeAdded && (
+                                      <div className="text-xs text-success-400">
+                                        +{formatPrice(country.price_kopeks)}{' '}
+                                        {t('subscription.serverManagement.forDays', {
+                                          days: countriesData.days_left,
+                                        })}
+                                        {country.has_discount && (
+                                          <span className="ml-1 text-dark-500 line-through">
+                                            {formatPrice(
+                                              Math.round(
+                                                (country.base_price_kopeks *
+                                                  countriesData.days_left) /
+                                                  30,
+                                              ),
+                                            )}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    {!willBeAdded && !isCurrentlyConnected && (
+                                      <div className="text-xs text-dark-500">
+                                        {formatPrice(country.price_per_month_kopeks)}
+                                        {t('subscription.serverManagement.perMonth')}
+                                        {country.has_discount && (
+                                          <span className="ml-1 text-dark-600 line-through">
+                                            {formatPrice(country.base_price_kopeks)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    {!country.is_available && !isCurrentlyConnected && (
+                                      <div className="text-xs text-dark-500">
+                                        {t('subscription.serverManagement.unavailable')}
+                                      </div>
                                     )}
                                   </div>
-                                  {willBeAdded && (
-                                    <div className="text-xs text-success-400">
-                                      +{formatPrice(country.price_kopeks)}{' '}
-                                      {t('subscription.serverManagement.forDays', {
-                                        days: countriesData.days_left,
-                                      })}
-                                      {country.has_discount && (
-                                        <span className="ml-1 text-dark-500 line-through">
-                                          {formatPrice(
-                                            Math.round(
-                                              (country.base_price_kopeks *
-                                                countriesData.days_left) /
-                                                30,
-                                            ),
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {!willBeAdded && !isCurrentlyConnected && (
-                                    <div className="text-xs text-dark-500">
-                                      {formatPrice(country.price_per_month_kopeks)}
-                                      {t('subscription.serverManagement.perMonth')}
-                                      {country.has_discount && (
-                                        <span className="ml-1 text-dark-600 line-through">
-                                          {formatPrice(country.base_price_kopeks)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {!country.is_available && !isCurrentlyConnected && (
-                                    <div className="text-xs text-dark-500">
-                                      {t('subscription.serverManagement.unavailable')}
-                                    </div>
-                                  )}
                                 </div>
-                              </div>
-                              {country.country_code && (
-                                <span className="text-xl">
-                                  {getFlagEmoji(country.country_code)}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
+                                {country.country_code && (
+                                  <span className="text-xl">
+                                    {getFlagEmoji(country.country_code)}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                       </div>
 
                       {(() => {
@@ -1955,6 +2058,40 @@ export default function Subscription() {
             </div>
           )}
 
+          {/* Expired subscription notice - prompt to purchase new tariff */}
+          {isTariffsMode &&
+            purchaseOptions &&
+            'subscription_is_expired' in purchaseOptions &&
+            purchaseOptions.subscription_is_expired && (
+              <div className="mb-6 rounded-xl border border-error-500/30 bg-gradient-to-r from-error-500/10 to-warning-500/10 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-error-500/20">
+                    <svg
+                      className="h-5 w-5 text-error-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-medium text-error-300">
+                      {t('subscription.expiredBanner.title')}
+                    </div>
+                    <div className="mt-1 text-sm text-dark-400">
+                      {t('subscription.expiredBanner.selectTariff')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
           {/* Legacy subscription notice - if user has subscription without tariff */}
           {subscription && !subscription.is_trial && !subscription.tariff_id && (
             <div className="mb-6 rounded-xl border border-accent-500/30 bg-accent-500/10 p-4">
@@ -2035,14 +2172,35 @@ export default function Subscription() {
                       )}
 
                       <div className="flex items-center justify-between border-t border-dark-700/50 pt-3">
-                        <span className="font-medium text-dark-100">
-                          {t('subscription.switchTariff.upgradeCost')}
-                        </span>
-                        <span className="text-lg font-bold text-accent-400">
-                          {switchPreview.upgrade_cost_kopeks > 0
-                            ? switchPreview.upgrade_cost_label
-                            : t('subscription.switchTariff.free')}
-                        </span>
+                        <div>
+                          <span className="font-medium text-dark-100">
+                            {t('subscription.switchTariff.upgradeCost')}
+                          </span>
+                          {/* Discount badge */}
+                          {switchPreview.discount_percent && switchPreview.discount_percent > 0 && (
+                            <span className="ml-2 inline-block rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-400">
+                              -{switchPreview.discount_percent}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {/* Show original price with strikethrough if discount */}
+                          {switchPreview.discount_percent &&
+                            switchPreview.discount_percent > 0 &&
+                            switchPreview.base_upgrade_cost_kopeks &&
+                            switchPreview.base_upgrade_cost_kopeks > 0 && (
+                              <span className="mr-2 text-sm text-dark-500 line-through">
+                                {formatPrice(switchPreview.base_upgrade_cost_kopeks)}
+                              </span>
+                            )}
+                          <span
+                            className={`text-lg font-bold ${switchPreview.upgrade_cost_kopeks === 0 ? 'text-green-400' : 'text-accent-400'}`}
+                          >
+                            {switchPreview.upgrade_cost_kopeks > 0
+                              ? switchPreview.upgrade_cost_label
+                              : t('subscription.switchTariff.free')}
+                          </span>
+                        </div>
                       </div>
 
                       {!switchPreview.has_enough_balance &&
@@ -2066,6 +2224,27 @@ export default function Subscription() {
                           t('subscription.switchTariff.switch')
                         )}
                       </button>
+
+                      {/* Show error (except subscription_expired which redirects to purchase) */}
+                      {switchTariffMutation.isError &&
+                        (() => {
+                          const detail =
+                            switchTariffMutation.error instanceof AxiosError
+                              ? switchTariffMutation.error.response?.data?.detail
+                              : null;
+                          // Skip displaying if it's subscription_expired (handled by redirect)
+                          if (
+                            typeof detail === 'object' &&
+                            detail?.error_code === 'subscription_expired'
+                          ) {
+                            return null;
+                          }
+                          return (
+                            <div className="mt-3 text-center text-sm text-error-400">
+                              {getErrorMessage(switchTariffMutation.error)}
+                            </div>
+                          );
+                        })()}
                     </>
                   );
                 })()
@@ -2125,11 +2304,20 @@ export default function Subscription() {
                   .map((tariff) => {
                     const isCurrentTariff =
                       tariff.is_current || tariff.id === subscription?.tariff_id;
+                    // Check if subscription is expired from purchaseOptions
+                    const isSubscriptionExpired =
+                      isTariffsMode &&
+                      purchaseOptions &&
+                      'subscription_is_expired' in purchaseOptions &&
+                      purchaseOptions.subscription_is_expired === true;
+                    // canSwitch only if subscription is active (not expired, not trial)
                     const canSwitch =
                       subscription &&
                       subscription.tariff_id &&
                       !isCurrentTariff &&
-                      !subscription.is_trial;
+                      !subscription.is_trial &&
+                      !isSubscriptionExpired &&
+                      subscription.is_active;
                     // Если есть подписка БЕЗ tariff_id (классическая) - разрешить выбрать тариф
                     const isLegacySubscription =
                       subscription && !subscription.is_trial && !subscription.tariff_id;
@@ -3021,8 +3209,15 @@ export default function Subscription() {
                           if (period.traffic.current !== undefined) {
                             setSelectedTraffic(period.traffic.current);
                           }
-                          if (period.servers.selected) {
-                            setSelectedServers(period.servers.selected);
+                          const availableServers = getAvailableServers(period);
+                          // If only 1 server available, auto-select it (step will be skipped)
+                          if (availableServers.length === 1) {
+                            setSelectedServers([availableServers[0].uuid]);
+                          } else if (period.servers.selected) {
+                            const availUuids = new Set(availableServers.map((s) => s.uuid));
+                            setSelectedServers(
+                              period.servers.selected.filter((uuid) => availUuids.has(uuid)),
+                            );
                           }
                           if (period.devices.current) {
                             setSelectedDevices(period.devices.current);
@@ -3036,7 +3231,7 @@ export default function Subscription() {
                       >
                         {displayDiscount && displayDiscount > 0 && (
                           <div
-                            className={`absolute -right-2 -top-2 rounded-full px-2 py-0.5 text-xs font-medium text-white ${
+                            className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-xs font-medium text-white shadow-sm ${
                               hasExistingDiscount ? 'bg-success-500' : 'bg-orange-500'
                             }`}
                           >
@@ -3044,7 +3239,7 @@ export default function Subscription() {
                           </div>
                         )}
                         <div className="text-lg font-semibold text-dark-100">{period.label}</div>
-                        <div className="flex items-center gap-2">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="font-medium text-accent-400">
                             {formatPrice(promoPeriod.price)}
                           </span>
@@ -3083,20 +3278,41 @@ export default function Subscription() {
                             : ''
                         } ${!option.is_available ? 'cursor-not-allowed opacity-50' : ''}`}
                       >
-                        {promoTraffic.percent && (
-                          <div className="absolute -right-2 -top-2 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-medium text-white">
-                            -{promoTraffic.percent}%
-                          </div>
-                        )}
-                        <div className="text-lg font-semibold text-dark-100">{option.label}</div>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-accent-400">{formatPrice(promoTraffic.price)}</span>
-                          {promoTraffic.original && (
-                            <span className="text-xs text-dark-500 line-through">
-                              {formatPrice(promoTraffic.original)}
-                            </span>
-                          )}
-                        </div>
+                        {(() => {
+                          const trafficDisplayDiscount = hasExistingDiscount
+                            ? option.discount_percent
+                            : promoTraffic.percent;
+                          const trafficDisplayOriginal = hasExistingDiscount
+                            ? option.original_price_kopeks
+                            : promoTraffic.original;
+                          return (
+                            <>
+                              {trafficDisplayDiscount && trafficDisplayDiscount > 0 && (
+                                <div
+                                  className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-xs font-medium text-white shadow-sm ${
+                                    hasExistingDiscount ? 'bg-success-500' : 'bg-orange-500'
+                                  }`}
+                                >
+                                  -{trafficDisplayDiscount}%
+                                </div>
+                              )}
+                              <div className="text-lg font-semibold text-dark-100">
+                                {option.label}
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                                <span className="text-accent-400">
+                                  {formatPrice(promoTraffic.price)}
+                                </span>
+                                {trafficDisplayOriginal &&
+                                  trafficDisplayOriginal > promoTraffic.price && (
+                                    <span className="text-xs text-dark-500 line-through">
+                                      {formatPrice(trafficDisplayOriginal)}
+                                    </span>
+                                  )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </button>
                     );
                   })}
@@ -3107,8 +3323,9 @@ export default function Subscription() {
               {currentStep === 'servers' && selectedPeriod?.servers.options && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {selectedPeriod.servers.options
-                    // Hide Trial server for users who already have trial subscription
+                    // Hide unavailable (disabled) servers and trial servers for existing trial users
                     .filter((server) => {
+                      if (!server.is_available) return false;
                       if (subscription?.is_trial && server.name.toLowerCase().includes('trial')) {
                         return false;
                       }
@@ -3136,11 +3353,20 @@ export default function Subscription() {
                                 : 'cursor-not-allowed border-dark-800/30 bg-dark-900/30 opacity-50'
                           }`}
                         >
-                          {promoServer.percent && (
-                            <div className="absolute -right-2 -top-2 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-medium text-white">
-                              -{promoServer.percent}%
-                            </div>
-                          )}
+                          {(() => {
+                            const serverDisplayDiscount = hasExistingDiscount
+                              ? server.discount_percent
+                              : promoServer.percent;
+                            return serverDisplayDiscount && serverDisplayDiscount > 0 ? (
+                              <div
+                                className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-xs font-medium text-white shadow-sm ${
+                                  hasExistingDiscount ? 'bg-success-500' : 'bg-orange-500'
+                                }`}
+                              >
+                                -{serverDisplayDiscount}%
+                              </div>
+                            ) : null;
+                          })()}
                           <div className="flex items-center gap-3">
                             <div
                               className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 ${
@@ -3153,16 +3379,21 @@ export default function Subscription() {
                             </div>
                             <div>
                               <div className="font-medium text-dark-100">{server.name}</div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                 <span className="text-sm text-accent-400">
                                   {formatPrice(promoServer.price)}
                                   {t('subscription.perMonth')}
                                 </span>
-                                {promoServer.original && (
-                                  <span className="text-xs text-dark-500 line-through">
-                                    {formatPrice(promoServer.original)}
-                                  </span>
-                                )}
+                                {(() => {
+                                  const serverOriginal = hasExistingDiscount
+                                    ? server.original_price_kopeks
+                                    : promoServer.original;
+                                  return serverOriginal && serverOriginal > promoServer.price ? (
+                                    <span className="text-xs text-dark-500 line-through">
+                                      {formatPrice(serverOriginal)}
+                                    </span>
+                                  ) : null;
+                                })()}
                               </div>
                             </div>
                           </div>
