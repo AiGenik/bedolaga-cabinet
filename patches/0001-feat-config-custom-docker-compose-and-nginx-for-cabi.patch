@@ -1,0 +1,48 @@
+From f9f7d1c93a20c04c03a723b9162df04f914a25a3 Mon Sep 17 00:00:00 2001
+From: root <root@Remnawave-Panel.play2go.cloud>
+Date: Mon, 2 Feb 2026 14:32:35 +0000
+Subject: [PATCH] feat(config): custom docker-compose and nginx for cabinet
+
+---
+ docker-compose.yml | 7 +++++++
+ nginx.conf         | 2 +-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 2ffd9bb..f57999f 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -21,6 +21,8 @@ services:
+       # Маппинг: <хост-порт>:<контейнер-порт>
+       # Внутри контейнера nginx слушает на порту 80
+       - '${CABINET_PORT:-3020}:80'
++    networks:
++      - remnawave-network
+     healthcheck:
+       test:
+         [
+@@ -35,3 +37,8 @@ services:
+       timeout: 3s
+       retries: 3
+       start_period: 10s
++
++networks:
++  remnawave-network:
++    external: true
++    name: remnawave-network
+diff --git a/nginx.conf b/nginx.conf
+index 1706b3b..70142b2 100644
+--- a/nginx.conf
++++ b/nginx.conf
+@@ -12,7 +12,7 @@ server {
+ 
+     # API проксировать, если нужно
+     location /api/ {
+-        try_files $uri /index.html;
++        proxy_pass http://localhost:8080/api/;
+         proxy_http_version 1.1;
+         proxy_set_header Host $host;
+         proxy_set_header X-Real-IP $remote_addr;
+-- 
+2.43.0
+
