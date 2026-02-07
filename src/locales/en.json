@@ -161,6 +161,8 @@
     "or": "or",
     "registerHint": "To register with email, first log in via Telegram, then link your email in settings.",
     "telegramRequired": "Telegram authorization required",
+    "telegramRetryFailed": "Authorization failed. Close the app and try again.",
+    "telegramReopenHint": "If the problem persists, close and reopen the app",
     "telegramNotConfigured": "Telegram bot is not configured",
     "authenticating": "Authenticating...",
     "orOpenInApp": "Or open the bot in the app",
@@ -185,7 +187,13 @@
     "forgotPasswordHint": "Enter your email to receive a reset link",
     "loginSuccess": "Login successful",
     "passwordResetSent": "Password reset link sent to your email",
-    "sendResetLink": "Send reset link"
+    "sendResetLink": "Send reset link",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithYandex": "Continue with Yandex",
+    "continueWithDiscord": "Continue with Discord",
+    "continueWithVk": "Continue with VK",
+    "oauthError": "Authorization was denied or failed",
+    "oauthExpired": "OAuth session expired. Please try again."
   },
   "emailVerification": {
     "title": "Email Verification",
@@ -346,7 +354,8 @@
       "changeApp": "Change app",
       "selectPlatform": "Select platform",
       "app": "app",
-      "apps": "apps"
+      "apps": "apps",
+      "tutorial": "Tutorial"
     },
     "myDevices": "My Devices",
     "noDevices": "No connected devices",
@@ -752,7 +761,8 @@
       "campaigns": "Campaigns",
       "promoOffers": "Promo Offers",
       "promocodes": "Promo Codes",
-      "promoGroups": "Discount Groups"
+      "promoGroups": "Discount Groups",
+      "trafficUsage": "Traffic Usage"
     },
     "panel": {
       "title": "Admin Panel",
@@ -774,7 +784,45 @@
       "campaignsDesc": "Advertising campaigns",
       "promoOffersDesc": "Personal discounts",
       "promocodesDesc": "Manage promo codes",
-      "promoGroupsDesc": "Discount groups for users"
+      "promoGroupsDesc": "Discount groups for users",
+      "trafficUsageDesc": "Per-user traffic by nodes"
+    },
+    "trafficUsage": {
+      "title": "Traffic Usage",
+      "subtitle": "Per-user traffic statistics by nodes",
+      "period": "Period",
+      "days": "d",
+      "exportCsv": "Export CSV",
+      "exportSuccess": "CSV sent to your Telegram",
+      "exportError": "Failed to export",
+      "user": "User",
+      "tariff": "Tariff",
+      "devices": "Devices",
+      "trafficLimit": "Limit",
+      "total": "Total",
+      "noData": "No traffic data",
+      "loading": "Loading traffic data...",
+      "noTariff": "\u2014",
+      "search": "Search by name or username",
+      "allTariffs": "All tariffs",
+      "nodes": "Nodes",
+      "allNodes": "All nodes",
+      "status": "Status",
+      "allStatuses": "All",
+      "statusActive": "Active",
+      "statusTrial": "Trial",
+      "statusExpired": "Expired",
+      "statusDisabled": "Disabled",
+      "customDates": "Custom dates",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "totalThreshold": "Total GB/d",
+      "nodeThreshold": "Node GB/d",
+      "risk": "Risk",
+      "riskLow": "Low",
+      "riskMedium": "Medium",
+      "riskHigh": "High",
+      "riskCritical": "Critical"
     },
     "emailTemplates": {
       "title": "Email Templates",
@@ -1090,7 +1138,12 @@
       "emailContent": "Email content",
       "emailContentHint": "HTML supported",
       "emailContentPlaceholder": "<p>Hello, {{user_name}}!</p>\n<p>Your message here...</p>",
-      "emailVariables": "Available variables"
+      "emailVariables": "Available variables",
+      "enableTelegram": "Telegram",
+      "enableEmail": "Email",
+      "sendingBoth": "2 broadcasts will be created",
+      "bothCreated": "Broadcasts created",
+      "atLeastOneChannel": "Select at least one channel"
     },
     "settings": {
       "title": "System Settings",
@@ -1264,6 +1317,7 @@
       "reminderCooldownDesc": "Minimum time between reminders (1-120 minutes)",
       "settingsUpdateError": "Error saving settings",
       "copyTelegramId": "Click to copy Telegram ID",
+      "viewUser": "Profile",
       "cabinetNotifications": "Cabinet Notifications",
       "userNotificationsEnabled": "User Notifications",
       "userNotificationsEnabledDesc": "Send notifications to users about admin replies",
@@ -1305,6 +1359,9 @@
       "confirmDeleteText": "This action cannot be undone. The tariff will be permanently deleted.",
       "confirmDeleteWithSubscriptions": "This tariff has {{count}} active subscriptions. After deletion, users will need to select a new tariff when renewing.",
       "deleteSuccess": "Tariff deleted successfully",
+      "saveOrder": "Save order",
+      "orderSaved": "Order saved",
+      "dragToReorder": "Drag to reorder",
       "days": "days",
       "days_one": "{{count}} day",
       "days_other": "{{count}} days",
@@ -1802,7 +1859,7 @@
         },
         "confirmDelete": {
           "title": "Delete user?",
-          "message": "Are you sure? This action is irreversible. All user data will be deleted."
+          "message": "Are you sure? This action is irreversible. The user will be fully deleted from the bot and from the Remnawave panel."
         },
         "confirmResetTrial": {
           "title": "Reset trial?",
@@ -1822,14 +1879,36 @@
           "info": "Information",
           "subscription": "Subscription",
           "balance": "Balance",
-          "sync": "Synchronization"
+          "sync": "Synchronization",
+          "tickets": "Tickets"
         },
+        "noTickets": "No tickets from this user",
+        "ticketsCount": "tickets",
+        "messagesCount": "messages",
         "status": "Status",
         "language": "Language",
         "registration": "Registration",
         "lastActivity": "Last activity",
         "totalSpent": "Total spent",
         "purchases": "Purchases",
+        "campaign": "Advertising campaign",
+        "referralsList": "Referrals list",
+        "referralEarnings": "Referral earnings",
+        "noReferrals": "No referrals",
+        "panelConfig": "Panel configuration",
+        "trojanPassword": "Trojan password",
+        "vlessUuid": "VLESS UUID",
+        "ssPassword": "SS password",
+        "subscriptionUrl": "Subscription URL",
+        "happLink": "HAPP link",
+        "firstConnected": "First connected",
+        "lastOnline": "Last online",
+        "lastNode": "Last node",
+        "liveTraffic": "Current traffic",
+        "lifetime": "Lifetime",
+        "nodeUsage": "Node usage",
+        "copied": "Copied",
+        "panelNotFound": "User not found in panel",
         "referral": {
           "title": "Referral program",
           "referrals": "Referrals",
@@ -1842,6 +1921,26 @@
           "subscription": "• Subscription purchase prohibited",
           "reason": "Reason"
         },
+        "actions": {
+          "title": "Actions",
+          "areYouSure": "Are you sure?"
+        },
+        "promoGroup": "Promo group",
+        "noPromoGroup": "Not set",
+        "changePromoGroup": "Change",
+        "selectPromoGroup": "Select group",
+        "removePromoGroup": "Remove",
+        "activePromoOffer": "Active promo offer",
+        "discount": "Discount",
+        "source": "Source",
+        "expiresAt": "Expires",
+        "deactivateOffer": "Deactivate",
+        "sendOffer": "Send offer",
+        "discountPercent": "Discount %",
+        "validHours": "Valid hours",
+        "offerSent": "Offer sent",
+        "offerSendError": "Failed to send offer",
+        "offerDeactivated": "Offer deactivated",
         "subscription": {
           "current": "Current subscription",
           "tariff": "Tariff",
@@ -2626,6 +2725,12 @@
       "hint": "Click check button after subscribing",
       "notSubscribed": "You haven't subscribed to the channel yet",
       "checkError": "Check failed. Please try again later."
+    },
+    "blacklisted": {
+      "title": "Access Denied",
+      "defaultMessage": "Your account has been blocked.",
+      "reason": "Reason",
+      "contactSupport": "If you believe this is an error, please contact support."
     }
   }
 }

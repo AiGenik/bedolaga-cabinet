@@ -1,10 +1,14 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router';
 import { useAuthStore } from './store/auth';
 import { useBlockingStore } from './store/blocking';
 import Layout from './components/layout/Layout';
 import PageLoader from './components/common/PageLoader';
-import { MaintenanceScreen, ChannelSubscriptionScreen } from './components/blocking';
+import {
+  MaintenanceScreen,
+  ChannelSubscriptionScreen,
+  BlacklistedScreen,
+} from './components/blocking';
 import { saveReturnUrl } from './utils/token';
 import { useAnalyticsCounters } from './hooks/useAnalyticsCounters';
 // Auth pages - load immediately (small)
@@ -14,6 +18,7 @@ import TelegramRedirect from './pages/TelegramRedirect';
 import DeepLinkRedirect from './pages/DeepLinkRedirect';
 import VerifyEmail from './pages/VerifyEmail';
 import ResetPassword from './pages/ResetPassword';
+import OAuthCallback from './pages/OAuthCallback';
 
 // User pages - lazy load
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -26,6 +31,7 @@ const Contests = lazy(() => import('./pages/Contests'));
 const Polls = lazy(() => import('./pages/Polls'));
 const Info = lazy(() => import('./pages/Info'));
 const Wheel = lazy(() => import('./pages/Wheel'));
+const Connection = lazy(() => import('./pages/Connection'));
 const TopUpMethodSelect = lazy(() => import('./pages/TopUpMethodSelect'));
 const TopUpAmount = lazy(() => import('./pages/TopUpAmount'));
 
@@ -63,6 +69,7 @@ const AdminPromoOfferSend = lazy(() => import('./pages/AdminPromoOfferSend'));
 const AdminRemnawave = lazy(() => import('./pages/AdminRemnawave'));
 const AdminRemnawaveSquadDetail = lazy(() => import('./pages/AdminRemnawaveSquadDetail'));
 const AdminEmailTemplates = lazy(() => import('./pages/AdminEmailTemplates'));
+const AdminTrafficUsage = lazy(() => import('./pages/AdminTrafficUsage'));
 const AdminUserDetail = lazy(() => import('./pages/AdminUserDetail'));
 const AdminBroadcastDetail = lazy(() => import('./pages/AdminBroadcastDetail'));
 const AdminEmailTemplatePreview = lazy(() => import('./pages/AdminEmailTemplatePreview'));
@@ -121,6 +128,10 @@ function BlockingOverlay() {
     return <ChannelSubscriptionScreen />;
   }
 
+  if (blockingType === 'blacklisted') {
+    return <BlacklistedScreen />;
+  }
+
   return null;
 }
 
@@ -138,6 +149,7 @@ function App() {
         <Route path="/tg" element={<TelegramRedirect />} />
         <Route path="/connect" element={<DeepLinkRedirect />} />
         <Route path="/add" element={<DeepLinkRedirect />} />
+        <Route path="/auth/oauth/callback" element={<OAuthCallback />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -258,6 +270,16 @@ function App() {
             <ProtectedRoute>
               <LazyPage>
                 <Wheel />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/connection"
+          element={
+            <ProtectedRoute>
+              <LazyPage>
+                <Connection />
               </LazyPage>
             </ProtectedRoute>
           }
@@ -540,6 +562,16 @@ function App() {
             <AdminRoute>
               <LazyPage>
                 <AdminPayments />
+              </LazyPage>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/traffic-usage"
+          element={
+            <AdminRoute>
+              <LazyPage>
+                <AdminTrafficUsage />
               </LazyPage>
             </AdminRoute>
           }

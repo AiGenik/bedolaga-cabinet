@@ -1,12 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, useLocation, useNavigate } from 'react-router';
 import {
   showBackButton,
   hideBackButton,
   onBackButtonClick,
   offBackButtonClick,
 } from '@telegram-apps/sdk-react';
+import Twemoji from 'react-twemoji';
 import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PlatformProvider } from './platform/PlatformProvider';
 import { ThemeColorsProvider } from './providers/ThemeColorsProvider';
 import { WebSocketProvider } from './providers/WebSocketProvider';
@@ -66,17 +68,21 @@ export function AppWithNavigator() {
   return (
     <BrowserRouter>
       {isTelegram && <TelegramBackButton />}
-      <PlatformProvider>
-        <ThemeColorsProvider>
-          <TooltipProvider>
-            <ToastProvider>
-              <WebSocketProvider>
-                <App />
-              </WebSocketProvider>
-            </ToastProvider>
-          </TooltipProvider>
-        </ThemeColorsProvider>
-      </PlatformProvider>
+      <ErrorBoundary level="page">
+        <PlatformProvider>
+          <ThemeColorsProvider>
+            <TooltipProvider>
+              <ToastProvider>
+                <WebSocketProvider>
+                  <Twemoji options={{ className: 'twemoji', folder: 'svg', ext: '.svg' }}>
+                    <App />
+                  </Twemoji>
+                </WebSocketProvider>
+              </ToastProvider>
+            </TooltipProvider>
+          </ThemeColorsProvider>
+        </PlatformProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
