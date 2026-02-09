@@ -1,5 +1,51 @@
 # Changelog
 
+## [1.12.0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.11.1...v1.12.0) (2026-02-08)
+
+
+### Features
+
+* add admin traffic packages and device limit management UI ([2dfa520](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/2dfa5206046b50f4bc22793dfb448f684286adef))
+* add admin updates page with release history ([a15b3d4](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/a15b3d410157f916c6008f7dbbe24b1284d3d595))
+* add device management UI in admin user card ([6f31fbe](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/6f31fbe6b5638e400db2ea16af65ab69979dca97))
+* add enrichment columns to admin traffic usage table ([893c69a](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/893c69ab6fc05ddc4bb64d229ae20376471a4f07))
+* add inline referral commission editing in admin user card ([92d206f](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/92d206f5b655cca2cceff172305f07d5edc551b7))
+* add system info card to admin dashboard ([ab0270a](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/ab0270ac58565f883722f7b04aa300b644e7973b))
+* admin panel enhancements & release history ([3bd9abb](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/3bd9abb1db2aef6b4428f62a020b4ea57b6a3c85))
+* enable sorting on enrichment columns ([5678dfd](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/5678dfd55854d884220a02075fcc0f025752c189))
+* render GitHub markdown in release changelogs ([0c34668](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/0c34668e40d9d4eb7037da7d6f5c2c40c87b208f))
+
+
+### Bug Fixes
+
+* show email for OAuth/email users in traffic table ([a8ea5c9](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/a8ea5c958f846d84945ebbca2e30f002421786ff))
+
+## [1.11.1](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.11.0...v1.11.1) (2026-02-08)
+
+
+### Bug Fixes
+
+* hide backend URL from logo by fetching as blob ([de09ea0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/de09ea039bea2fdfe3f3a9b3bc6c368a3a27f9f7))
+* stretch low-res Aurora canvas to fill viewport ([23f56af](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/23f56afaf7182de6e8164fdc0075d4b4b02780d8))
+
+
+### Performance Improvements
+
+* reduce Aurora animated background GPU load by ~95% ([56788b1](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/56788b12e78ea2f45571b0a0f3a8c2e3b667355c))
+
+## [1.11.0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.10.0...v1.11.0) (2026-02-08)
+
+
+### Features
+
+* admin traffic usage, session persistence, and UI improvements ([2193df7](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/2193df799d839976cc19127ff4242c35c350e0b9))
+
+
+### Bug Fixes
+
+* persist refresh token across Telegram Mini App reopens ([a449dd6](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/a449dd69813417c3064510ea300090f34dfcd8cf))
+* persist refresh token across Telegram Mini App reopens ([20ea200](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/20ea2006ff703a76208c8ecfb8e2d9c2d789ccc4))
+
 ## [1.10.0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.9.0...v1.10.0) (2026-02-07)
 
 
