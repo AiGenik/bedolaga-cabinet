@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.14.0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.13.0...v1.14.0) (2026-02-11)
+
+
+### Features
+
+* compact login page with collapsible email, icon OAuth row, safe areas ([45cbfb5](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/45cbfb5ecb194eb9cdcee5a9cf8b4f79c20c1444))
+
+
+### Bug Fixes
+
+* guard oauthProviders with Array.isArray to prevent TypeError on Login page ([f74e316](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/f74e316161c3bea18bc9493e683556314db6172b))
+* harden OAuth login flow — open redirect, path traversal, info leak ([a744b41](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/a744b41910743e9604de669535f56a614fa269f1))
+* remove colored background from logo on login page ([6bf0af4](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/6bf0af4ff33adcd74d7ac291f4e6e4734e1e72f1))
+* remove redundant subtitle and register hint from login page ([d596b05](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/d596b05048b4b14fac68acd606842d717bbc9dd1))
+* restore package-lock.json for CI (npm ci requires it) ([069090a](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/069090a63412fdb99debe6e6058218b1e4105953))
+* use openTelegramLink for CryptoBot payment to open invoice in Telegram ([fc0dd39](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/fc0dd3955092235c5b52c4da066954b6e3beaa19))
+
+## [1.13.0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.12.0...v1.13.0) (2026-02-09)
+
+
+### Features
+
+* add empty state for connection page when no apps configured ([fb25df6](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/fb25df6f0f5dee55fc40496e29bf22c94efc27b3))
+* show affected subscriptions count on tariff deletion ([f10a02c](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/f10a02ceb6649b2dd4301365919fc066d604e95f))
+
+
+### Bug Fixes
+
+* check apps before subscription on connection page ([a4e6e35](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/a4e6e35da1f86163fbdb0ba90fd28c8ccdef4ed6))
+* hide Telegram back button on bottom nav pages ([03a7db5](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/03a7db53fbbf77d74f1f68ca8e723793d67c2dfb))
+* hide Telegram back button on bottom nav pages ([e5ed6d0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/e5ed6d0401892eabebd5bd226755cbf5f5ca927c))
+* prevent useCloseOnSuccessNotification from firing on mount ([0389acd](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/0389acdf83eb8f0e14301f0d0515000467a30ccc))
+* remove [@floating-ui](https://github.com/floating-ui) from radix chunk to resolve circular dependency ([772d83d](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/772d83d1c97f2689376bcadbd7b3c37cf8cb797e))
+
+
+### Performance Improvements
+
+* extract locales into separate chunk ([2c126f5](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/commit/2c126f5e12d51beff6e21280b423b1851f93a0ac))
+
 ## [1.12.0](https://github.com/BEDOLAGA-DEV/bedolaga-cabinet/compare/v1.11.1...v1.12.0) (2026-02-08)
 
 
